@@ -46,3 +46,32 @@ The output is 73 columns of data and uses 2.7MB of disk space
 
 > python TbfmMergedSummary.py flattened_dir  air_flt_w_delay_est 20190401 –o merged_summary 
 
+Intra-Center Duplicate Flight Processing
+
+![](images/intra_ex.JPG)
+
+One unique flight from ‘flt’ data may map to 2 or more flights in TBFM with distinct estimated times of arrival
+So how do we perform the unique matching? 
+There is no decoder ring, but the logic is broken into an intra-Center heuristic and inter-Center heuristic
+In this example, the flight data for AAL2051 from CLT->DCA matches 2 potential meter fixes that may have caused any APREQ delay
+DC_MET meter fix is EDC, using stream class DCA_DC_MET
+CAPSS meter fix is arrival TBFM, using stream class DCA_CAPSS_JETS
+To determine which scheduling point we should use, the meter fix which receives STA data from TBFM SWIM first is selected
+The reason for this is that the scheduling activity likely happened to this meter fix first, then was shared with other TBFM processes for informational purposes
+
+Inter-Center Duplicate Flight Processing
+
+Once intra-Center duplicates are removed, there may still be duplicates between two distinct Centers
+This often happens with extended metering or use of EDC with arrival metering when there is automatic information sharing between the Centers
+
+To find and remove these duplicates, the merge and summary logic in step 3 looks for all flights that have the same aid, dap, apt and ptime
+
+Each flight with the above unique keys are then iterated through and the flight with meter point closest to the origin airport is selected
+The reason for this is that the meter fix closest to the tower that had the delay pass back is the most likely to have received the APREQ delay
+
+Removing intra and inter Center duplicates is an important step to avoid double counting delay
+The logic provided is believed to perform this accurately, however, additional review of this logic by TBFM developers is desired
+
+Once these steps are completed, additional logic is applied to estimate the level of confidence we have with the delay estimate as indicated by the 'delay_trustworthy' column of the output.
+
+
